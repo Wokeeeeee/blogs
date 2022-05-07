@@ -23,15 +23,15 @@
 <meta property="og:site_name" content="wokeeeeee">
 <meta property="og:description" content="串口号绑定 通过串口类型绑定:此情况适用于每种串口类别(如ttyUSB ,ttyACM等)只有一个 通过硬件串口绑定:如果一种串口类型有多个设备接入,则可以通过设备的硬件端口来绑定  无论是那种绑定方式,都需要完成三步:查看设备信息, 写rules文件和激活规则 两种绑定方式的区别不大,因为通过硬件串口绑定过程较多且包含了串口类型绑定的步骤,所以这里只介绍通过硬件串口的绑定方式. 查看设备信息首先">
 <meta property="og:locale" content="zh_CN">
-<meta property="og:image" content="https://wokeeeeee.github.io/blogs/linux%E7%B3%BB%E7%BB%9F%E4%B8%8B%E4%B8%B2%E5%8F%A3%E5%8F%B7%E7%BB%91%E5%AE%9A/udevadm1.png">
+<meta property="og:image" content="https://wokeeeeee.github.io/blogs/public/2022/05/07/linux%E7%B3%BB%E7%BB%9F%E4%B8%8B%E4%B8%B2%E5%8F%A3%E5%8F%B7%E7%BB%91%E5%AE%9A/udevadm1.png">
 <meta property="og:image" content="https://wokeeeeee.github.io/blogs/linux%E7%B3%BB%E7%BB%9F%E4%B8%8B%E4%B8%B2%E5%8F%A3%E5%8F%B7%E7%BB%91%E5%AE%9A/rules.png">
 <meta property="og:image" content="https://wokeeeeee.github.io/blogs/linux%E7%B3%BB%E7%BB%9F%E4%B8%8B%E4%B8%B2%E5%8F%A3%E5%8F%B7%E7%BB%91%E5%AE%9A/effect.png">
 <meta property="article:published_time" content="2022-05-07T07:05:40.000Z">
-<meta property="article:modified_time" content="2022-05-07T07:15:32.498Z">
+<meta property="article:modified_time" content="2022-05-07T07:25:44.561Z">
 <meta property="article:author" content="Luo Xinyu">
 <meta property="article:tag" content="实物">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:image" content="https://wokeeeeee.github.io/blogs/linux%E7%B3%BB%E7%BB%9F%E4%B8%8B%E4%B8%B2%E5%8F%A3%E5%8F%B7%E7%BB%91%E5%AE%9A/udevadm1.png">
+<meta name="twitter:image" content="https://wokeeeeee.github.io/blogs/public/2022/05/07/linux%E7%B3%BB%E7%BB%9F%E4%B8%8B%E4%B8%B2%E5%8F%A3%E5%8F%B7%E7%BB%91%E5%AE%9A/udevadm1.png">
   
   
   <title>linux系统下串口号绑定 - wokeeeeee</title>
@@ -269,7 +269,7 @@
 <p>然后终端输入(以<code>video6</code>为例)</p>
 <figure class="highlight awk"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs awk">udevadm info -a <span class="hljs-regexp">/dev/</span>video6<br></code></pre></td></tr></table></figure>
 
-<p><img src="/blogs/./linux%E7%B3%BB%E7%BB%9F%E4%B8%8B%E4%B8%B2%E5%8F%A3%E5%8F%B7%E7%BB%91%E5%AE%9A/udevadm1.png" srcset="/blogs/img/loading.gif" lazyload></p>
+<p><img src="/blogs/public/2022/05/07/linux%E7%B3%BB%E7%BB%9F%E4%B8%8B%E4%B8%B2%E5%8F%A3%E5%8F%B7%E7%BB%91%E5%AE%9A/udevadm1.png" srcset="/blogs/img/loading.gif" lazyload></p>
 <p>特别注意<code>KERNELS</code>,<code>ATTRS&#123;idVendor&#125;</code>,<code>ATTRS&#123;idProduct&#125;</code>的对应值</p>
 <h4 id="写rules规则"><a href="#写rules规则" class="headerlink" title="写rules规则"></a>写rules规则</h4><p>在<code>/etc/udev/rules.d</code>里建立rules文件,</p>
 <p>然后输入以下内容</p>
