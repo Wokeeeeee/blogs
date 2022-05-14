@@ -1,0 +1,842 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/blogs/img/fluid.png">
+  <link rel="icon" href="/blogs/img/fluid.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Luo Xinyu">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="HMM实现中文分词和词性标注目的分词和词性标注 1.使用分词工具(jieba等等)或者自己实现课程讲的任意分词和词性标注方法进行数据集的分词和词性标注实验； 2.对测试集分别进行分词和词性标注性能评估，评估指标至少包括准确率，召回率，F-测度； 原理HMM时序的概率模型，描述由一个隐藏的马尔可夫链接随机生成不可观察的状态序列，再有状态序列生成一个观测序列的过程。 μ(A,B,π) 初始状态概率向量">
+<meta property="og:type" content="article">
+<meta property="og:title" content="NLP | HMM中文分词及词性标注">
+<meta property="og:url" content="https://wokeeeeee.github.io/blogs/2022/05/14/NLP-HMM%E4%B8%AD%E6%96%87%E5%88%86%E8%AF%8D%E5%8F%8A%E8%AF%8D%E6%80%A7%E6%A0%87%E6%B3%A8/index.html">
+<meta property="og:site_name" content="wokeeeeee">
+<meta property="og:description" content="HMM实现中文分词和词性标注目的分词和词性标注 1.使用分词工具(jieba等等)或者自己实现课程讲的任意分词和词性标注方法进行数据集的分词和词性标注实验； 2.对测试集分别进行分词和词性标注性能评估，评估指标至少包括准确率，召回率，F-测度； 原理HMM时序的概率模型，描述由一个隐藏的马尔可夫链接随机生成不可观察的状态序列，再有状态序列生成一个观测序列的过程。 μ(A,B,π) 初始状态概率向量">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://github.com/Wokeeeeee/picb/blob/master/picGo/hmm1.png?raw=true">
+<meta property="og:image" content="https://github.com/Wokeeeeee/picb/blob/master/picGo/hmm2.png?raw=true">
+<meta property="article:published_time" content="2022-05-14T14:13:03.000Z">
+<meta property="article:modified_time" content="2022-05-14T14:18:33.694Z">
+<meta property="article:author" content="Luo Xinyu">
+<meta property="article:tag" content="NLP">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://github.com/Wokeeeeee/picb/blob/master/picGo/hmm1.png?raw=true">
+  
+  
+  <title>NLP | HMM中文分词及词性标注 - wokeeeeee</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_hj8rtnfg7um.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_lbnruvf0jn.css">
+
+
+<link  rel="stylesheet" href="/blogs/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/blogs/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/blogs/css/highlight-dark.css" />
+  
+
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    var CONFIG = {"hostname":"wokeeeeee.github.io","root":"/blogs/","version":"1.8.14","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":null,"google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/blogs/local-search.xml"};
+  </script>
+  <script  src="/blogs/js/utils.js" ></script>
+  <script  src="/blogs/js/color-schema.js" ></script>
+
+  
+<meta name="generator" content="Hexo 6.1.0"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 50vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/blogs/">
+      <strong>Wokeeee</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/blogs/">
+                <i class="iconfont icon-home-fill"></i>
+                首页
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/blogs/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                归档
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/blogs/categories/">
+                <i class="iconfont icon-category-fill"></i>
+                分类
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/blogs/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                标签
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              &nbsp;<i class="iconfont icon-search"></i>&nbsp;
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">&nbsp;<i
+                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/blogs/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="NLP | HMM中文分词及词性标注"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2022-05-14 22:13" pubdate>
+          2022年5月14日 晚上
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          8.3k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          70 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">NLP | HMM中文分词及词性标注</h1>
+            
+            <div class="markdown-body">
+              
+              <h1 id="HMM实现中文分词和词性标注"><a href="#HMM实现中文分词和词性标注" class="headerlink" title="HMM实现中文分词和词性标注"></a>HMM实现中文分词和词性标注</h1><h2 id="目的"><a href="#目的" class="headerlink" title="目的"></a>目的</h2><p>分词和词性标注</p>
+<p>1.使用分词工具(jieba等等)或者自己实现课程讲的任意分词和词性标注方法进行数据集的分词和词性标注实验；</p>
+<p>2.对测试集分别进行分词和词性标注性能评估，评估指标至少包括准确率，召回率，F-测度；</p>
+<h2 id="原理"><a href="#原理" class="headerlink" title="原理"></a>原理</h2><h3 id="HMM"><a href="#HMM" class="headerlink" title="HMM"></a>HMM</h3><p>时序的概率模型，描述由一个隐藏的马尔可夫链接随机生成不可观察的状态序列，再有状态序列生成一个观测序列的过程。</p>
+<h4 id="μ-A-B-π"><a href="#μ-A-B-π" class="headerlink" title="μ(A,B,π)"></a><em>μ</em>(<em>A</em>,<em>B</em>,<em>π</em>)</h4><ul>
+<li>初始状态概率向量：句子的第一个字属于BEMS四种状态的概率</li>
+<li>状态转移概率矩阵：如果前一个字的位置是B，那么后一个字位置为BEMS的概率各是多少？</li>
+<li>观测概率矩阵： 在状态b条件下，观察值为耀的概率</li>
+</ul>
+<h4 id="三类基本问题"><a href="#三类基本问题" class="headerlink" title="三类基本问题"></a>三类基本问题</h4><ol>
+<li>给定模型<em>μ</em>&#x3D;(<em>A</em>,<em>B</em>,<em>π</em>)，计算某个观察序列<em>O&#x3D;o1o2 …… oT</em>的概率<em>P</em>(<em>O</em> | <em>μ</em>)&#x3D;?—&gt;向前算法</li>
+<li>给定模型<em>μ</em>&#x3D;(<em>A</em>,<em>B</em>,π)和观察序列<em>O&#x3D;o1o2 …… oT</em> ，如何有效地确定一个状态序列<em>Q&#x3D;q1q2 …… qT</em> ，以便最好地解释观察序列？arg max⁡ P(Q | O)&#x3D;？—&gt; Viterbi算法</li>
+<li>给定一个观察序列<em>O&#x3D;o1o2 …… oT</em> ，如何找到一个能够最好地解释这个观察序列的模型，即如何调节模型参数<em>μ</em>&#x3D;(<em>A</em>,<em>B</em>,π)，使得<em>P</em>(<em>O</em>| <em>μ</em>)最大化？—&gt;Baum-Welch算法</li>
+</ol>
+<h4 id="Viterbi"><a href="#Viterbi" class="headerlink" title="Viterbi"></a>Viterbi</h4><p>分词和词性标注都属于问题2，采用viterbi算法，用动态规划去求解最优路径。</p>
+<p><img src="https://github.com/Wokeeeeee/picb/blob/master/picGo/hmm1.png?raw=true" srcset="/blogs/img/loading.gif" lazyload alt="img"></p>
+<p>如果从起点A经过P、H到达终点G是一条最短路径，那么，由A出发经过P到达H所走的这条子路径，对于从A出发到H的所有可能的路径来说，必定也是<strong>最短路径</strong></p>
+<p>全局最优→局部最优</p>
+<p>局部最优是全局最优的必要条件</p>
+<h2 id="实验内容"><a href="#实验内容" class="headerlink" title="实验内容"></a>实验内容</h2><h3 id="中文分词"><a href="#中文分词" class="headerlink" title="中文分词"></a>中文分词</h3><h4 id="BMES"><a href="#BMES" class="headerlink" title="BMES"></a>BMES</h4><p>汉语句子作为输入，BEMS序列串作为输出</p>
+<ul>
+<li>B-&gt;汉语的起始词</li>
+<li>M-&gt;中间字</li>
+<li>E-&gt;结束词</li>
+<li>S-&gt;单字成词</li>
+</ul>
+<h4 id="基于HMM的中文分词"><a href="#基于HMM的中文分词" class="headerlink" title="基于HMM的中文分词"></a>基于HMM的中文分词</h4><ol>
+<li><h5 id="导入已知分好的词序，训练HMM的三个矩阵。"><a href="#导入已知分好的词序，训练HMM的三个矩阵。" class="headerlink" title="导入已知分好的词序，训练HMM的三个矩阵。"></a>导入已知分好的词序，训练HMM的三个矩阵。</h5></li>
+</ol>
+<p>初始状态概率矩阵：统计所有训练样本中分别以状态S、B、M、E为初始状态的样本的数量，之后分别除以训练词语总数，就可以得到初始概率分布。</p>
+<p>状态转移概率矩阵：统计所有样本中，从状态S转移到B的出现次数，再除以S出现的总次数，便得到由S转移到B的转移概率，其他同理。</p>
+<p>观测概率矩阵：统计训练数据中，状态为j并观测为k的频数，除以训练数据中状态j出现的次数，其他同理。</p>
+<p>先统计频数，然后得到概率。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><code class="hljs Python"><span class="hljs-keyword">def</span> <span class="hljs-title function_">training</span>(<span class="hljs-params">self, observes, states</span>):<br>    <span class="hljs-keyword">for</span> i <span class="hljs-keyword">in</span> <span class="hljs-built_in">range</span>(<span class="hljs-built_in">len</span>(states)):<br>        <span class="hljs-keyword">if</span> i == <span class="hljs-number">0</span>:<br>            self.init_vec[states[<span class="hljs-number">0</span>]] += <span class="hljs-number">1</span><br>            self.state_count[states[<span class="hljs-number">0</span>]] += <span class="hljs-number">1</span><br>        <span class="hljs-keyword">else</span>:<br>            self.trans_mat[states[i - <span class="hljs-number">1</span>]][states[i]] += <span class="hljs-number">1</span><br>            self.state_count[states[i]] += <span class="hljs-number">1</span><br>        <span class="hljs-keyword">if</span> observes[i] <span class="hljs-keyword">not</span> <span class="hljs-keyword">in</span> self.emit_mat[states[i]]:<br>            self.emit_mat[states[i]][observes[i]] = <span class="hljs-number">1</span><br>        <span class="hljs-keyword">else</span>:<br>            self.emit_mat[states[i]][observes[i]] += <span class="hljs-number">1</span><br>            <br>            <br><br><span class="hljs-keyword">def</span> <span class="hljs-title function_">get_prob</span>(<span class="hljs-params">self</span>):<br>    init_vec_prob = &#123;&#125;<br>    trans_mat_prob = &#123;&#125;<br>    emit_mat_prob = &#123;&#125;<br>    <span class="hljs-comment"># 初始概率分布</span><br>    <span class="hljs-keyword">for</span> vec <span class="hljs-keyword">in</span> self.init_vec:<br>        init_vec_prob[vec] = self.init_vec[vec] / <span class="hljs-built_in">sum</span>(self.init_vec.values())<br><br>    <span class="hljs-comment"># 状态转移概率分布</span><br>    <span class="hljs-keyword">for</span> key1 <span class="hljs-keyword">in</span> self.trans_mat:<br>        trans_mat_prob[key1] = &#123;&#125;<br>        <span class="hljs-keyword">for</span> key2 <span class="hljs-keyword">in</span> self.trans_mat[key1]:<br>            trans_mat_prob[key1][key2] = self.trans_mat[key1][key2] / (<br>                self.state_count[key1] <span class="hljs-keyword">if</span> self.state_count[key1] != <span class="hljs-number">0</span> <span class="hljs-keyword">else</span> <span class="hljs-built_in">max</span>(self.state_count.values()))<br>    <span class="hljs-comment"># 观察概率</span><br>    <span class="hljs-keyword">for</span> key1 <span class="hljs-keyword">in</span> self.emit_mat:<br>        emit_mat_prob[key1] = &#123;&#125;<br>        <span class="hljs-keyword">for</span> key2 <span class="hljs-keyword">in</span> self.emit_mat[key1]:<br>            emit_mat_prob[key1][key2] = self.emit_mat[key1][key2] / (<br>                self.state_count[key1] <span class="hljs-keyword">if</span> self.state_count[key1] != <span class="hljs-number">0</span> <span class="hljs-keyword">else</span> <span class="hljs-built_in">max</span>(self.state_count.values()))<br>    <span class="hljs-keyword">return</span> init_vec_prob, trans_mat_prob, emit_mat_prob<br></code></pre></td></tr></table></figure>
+
+
+
+
+
+<ol>
+<li><h5 id="将HMM模型的三个矩阵带入viterbi算法"><a href="#将HMM模型的三个矩阵带入viterbi算法" class="headerlink" title="将HMM模型的三个矩阵带入viterbi算法"></a>将HMM模型的三个矩阵带入viterbi算法</h5></li>
+</ol>
+<p>第二类问题：</p>
+<p>给定模型<em>μ&#x3D;</em>(<em>A,B,π</em>)和观察序列<em>O&#x3D;o1o2 …… oT</em> ，如何确定最优的状态序列<em>Q&#x3D;q1q2 …… qT</em> </p>
+<h6 id="最优路径求解"><a href="#最优路径求解" class="headerlink" title="最优路径求解"></a>最优路径求解</h6><p><strong>最优问题：</strong></p>
+<p>如果从起点A经过P、H到达终点G是一条最短路径，那么，由A出发经过P到达H所走的这条子路径，对于从A出发到H的所有可能的路径来说，必定也是最短路径</p>
+<p><strong>动态规划：</strong></p>
+<ul>
+<li>在每个节点中仅存储从起点到当前节点的最优路径</li>
+<li>每增加一个节点，都把它跟各个前驱节点的最优路径连接起来，找出连接后的最优路径，仅把它存储起来</li>
+</ul>
+<h6 id="viterbi算法步骤"><a href="#viterbi算法步骤" class="headerlink" title="viterbi算法步骤"></a>viterbi算法步骤</h6><p><img src="https://github.com/Wokeeeeee/picb/blob/master/picGo/hmm2.png?raw=true" srcset="/blogs/img/loading.gif" lazyload alt="img"></p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><code class="hljs python"><span class="hljs-keyword">def</span> <span class="hljs-title function_">viterbi</span>(<span class="hljs-params">self, sequence, DEFAULT</span>):<br>    tab = [&#123;&#125;]<br>    path = &#123;&#125;<br><br>    init_vec, trans_mat, emit_mat = self.get_prob()<br>    <span class="hljs-comment"># init</span><br>    <span class="hljs-keyword">for</span> state <span class="hljs-keyword">in</span> self.states:<br>        tab[<span class="hljs-number">0</span>][state] = init_vec[state] * emit_mat[state].get(sequence[<span class="hljs-number">0</span>])<br>        path[state] = [state]<br><br>    <span class="hljs-comment"># dp</span><br>    <span class="hljs-keyword">for</span> t <span class="hljs-keyword">in</span> <span class="hljs-built_in">range</span>(<span class="hljs-number">1</span>, <span class="hljs-built_in">len</span>(sequence)):<br>        tab.append(&#123;&#125;)<br>        new_path = &#123;&#125;<br>        <span class="hljs-keyword">for</span> state1 <span class="hljs-keyword">in</span> STATES:<br>            items = []<br>            <span class="hljs-keyword">for</span> state2 <span class="hljs-keyword">in</span> STATES:  <span class="hljs-comment"># state2为后一个</span><br>                <span class="hljs-keyword">if</span> tab[t - <span class="hljs-number">1</span>][state2] == <span class="hljs-number">0</span>:<br>                    <span class="hljs-keyword">continue</span><br>                <span class="hljs-keyword">else</span>:<br>                    prob = tab[t - <span class="hljs-number">1</span>][state2] * trans_mat[state2].get(state1, DEFAULT) * emit_mat[state1].get(sequence[t], DEFAULT)<br>                    items.append((prob, state2))<br>            best = <span class="hljs-built_in">max</span>(items)<br>            tab[t][state1] = best[<span class="hljs-number">0</span>]<br>            new_path[state1] = path[best[<span class="hljs-number">1</span>]] + [state1]<br>        path = new_path<br>    prob, state = <span class="hljs-built_in">max</span>([(tab[<span class="hljs-built_in">len</span>(sequence) - <span class="hljs-number">1</span>][state], state) <span class="hljs-keyword">for</span> state <span class="hljs-keyword">in</span> STATES])<br>    <span class="hljs-keyword">return</span> prob, state, path<br></code></pre></td></tr></table></figure>
+
+
+
+
+
+<h4 id="NLP中的评价指标"><a href="#NLP中的评价指标" class="headerlink" title="NLP中的评价指标"></a>NLP中的评价指标</h4><p>$$<br>Precision&#x3D;\frac{|A\cap B|}{|B|};<br>$$</p>
+<p>$$<br>Recall&#x3D;\frac{|A\cap B|}{|A|}<br>$$</p>
+<p>$$<br>F-score&#x3D;\frac{2 \times Precision \times Recall}{Precision+Recall}<br>$$</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><code class="hljs Python"><span class="hljs-keyword">def</span> <span class="hljs-title function_">prf</span>(<span class="hljs-params">gold: <span class="hljs-built_in">str</span>, pred: <span class="hljs-built_in">str</span></span>):<br>    A_size, B_size, A_cap_B_size, OOV, IV, OOV_R, IV_R = <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span><br>    A, B = <span class="hljs-built_in">set</span>(to_region(gold)), <span class="hljs-built_in">set</span>(to_region(pred))<br>    A_size += <span class="hljs-built_in">len</span>(A)<br>    B_size += <span class="hljs-built_in">len</span>(B)<br>    A_cap_B_size += <span class="hljs-built_in">len</span>(A &amp; B)<br>    p, r = A_cap_B_size / B_size * <span class="hljs-number">100</span>, A_cap_B_size / A_size * <span class="hljs-number">100</span><br>    <span class="hljs-keyword">return</span> p, r, <span class="hljs-number">2</span> * p * r / (p + r)<br></code></pre></td></tr></table></figure>
+
+
+
+<h4 id="结果"><a href="#结果" class="headerlink" title="结果"></a>结果</h4><h5 id="参数估计"><a href="#参数估计" class="headerlink" title="参数估计"></a>参数估计</h5><p>训练得到的初始矩阵和状态转移矩阵概率.</p>
+<table>
+<thead>
+<tr>
+<th>trans_mat_prob</th>
+<th></th>
+<th></th>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody><tr>
+<td></td>
+<td>S</td>
+<td>M</td>
+<td>B</td>
+<td>E</td>
+</tr>
+<tr>
+<td>S</td>
+<td>0.38441</td>
+<td>0.0</td>
+<td>0.60212</td>
+<td>0.0</td>
+</tr>
+<tr>
+<td>M</td>
+<td>0.0</td>
+<td>0.31506</td>
+<td>0.0</td>
+<td>0.68493</td>
+</tr>
+<tr>
+<td>B</td>
+<td>0.0</td>
+<td>0.14315</td>
+<td>0.0</td>
+<td>0.85684</td>
+</tr>
+<tr>
+<td>E</td>
+<td>0.37346</td>
+<td>0.0</td>
+<td>0.60165</td>
+<td>0.0</td>
+</tr>
+</tbody></table>
+<table>
+<thead>
+<tr>
+<th>init_vec_prob</th>
+<th></th>
+</tr>
+</thead>
+<tbody><tr>
+<td>S</td>
+<td>0.346124</td>
+</tr>
+<tr>
+<td>M</td>
+<td>0</td>
+</tr>
+<tr>
+<td>B</td>
+<td>0.653875</td>
+</tr>
+<tr>
+<td>E</td>
+<td>0</td>
+</tr>
+</tbody></table>
+<h5 id="分词序列"><a href="#分词序列" class="headerlink" title="分词序列"></a>分词序列</h5><blockquote>
+<p>民族 复兴 迫切 需要 培养造 就 德才 兼备 的 人才 。 希望 你们 继续 发扬 严谨 治学 、 甘为 人梯 的 精神 ， 坚持 特色 、 争创 一流 ， 培养 更 多 具有 为国 奉献 钢筋 铁骨 的 高 素质 人才 ， 促进 钢铁 产业 创新 发展 、 绿色 低碳 发展 ， 为 铸 就 科技 强国 、 制造 强国 的 钢铁 脊梁 作出 新 的 更 大 的 贡献 ！</p>
+</blockquote>
+<h5 id="指标"><a href="#指标" class="headerlink" title="指标"></a>指标</h5><p>jieba分词结果作为标准</p>
+<table>
+<thead>
+<tr>
+<th>P</th>
+<th>85.93</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>R</td>
+<td>76.39</td>
+</tr>
+<tr>
+<td>F1</td>
+<td>80.88</td>
+</tr>
+</tbody></table>
+<h3 id="基于HMM的中文词性标注"><a href="#基于HMM的中文词性标注" class="headerlink" title="基于HMM的中文词性标注"></a>基于HMM的中文词性标注</h3><p>数据集为课程提供的people-2014文件夹。在实际操作过程中，没有考虑符合词性的参数估计和词性标注。例如[人民&#x2F;n 生活&#x2F;vn 水平&#x2F;n]&#x2F;nz 只考虑了人民&#x2F;n 生活&#x2F;vn 水平&#x2F;n，没有考虑人民生活水平\nz。</p>
+<p>也尝试了基于最大概率的标注方法，但效果不佳，且不能应对新词出现的问题，标注会产生\unknown。</p>
+<h4 id="训练参数矩阵"><a href="#训练参数矩阵" class="headerlink" title="训练参数矩阵"></a>训练参数矩阵</h4><p>采用people-2014&#x2F;train&#x2F;0123文件夹下的所有txt训练，这里用了一个简单的遍历问价夹下的所有txt文件。</p>
+<p>统计状态转移的频数，这里采用了”<strong>start</strong>“和”<strong>end</strong>“关键词来统计首尾位置上出现某词语的概率。由此，初始矩阵可以和概率转移矩阵合并。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><code class="hljs Python"><span class="hljs-keyword">def</span> <span class="hljs-title function_">training</span>(<span class="hljs-params">infile, transDict, emitDict</span>):<br>    fdi = <span class="hljs-built_in">open</span>(infile, <span class="hljs-string">&#x27;r&#x27;</span>, encoding=<span class="hljs-string">&#x27;utf-8&#x27;</span>)<br>    <span class="hljs-keyword">for</span> line <span class="hljs-keyword">in</span> fdi:<br>        infs = line.strip().split()<br>        infs = clearINFS(infs)<br>        wpList = [[<span class="hljs-string">&quot;__NONE__&quot;</span>, <span class="hljs-string">&quot;__start__&quot;</span>]] + [s.split(<span class="hljs-string">&quot;/&quot;</span>) <span class="hljs-keyword">for</span> s <span class="hljs-keyword">in</span> infs] + [[<span class="hljs-string">&quot;__NONE_&quot;</span>, <span class="hljs-string">&quot;__end__&quot;</span>]]<br>        <span class="hljs-keyword">for</span> i <span class="hljs-keyword">in</span> <span class="hljs-built_in">range</span>(<span class="hljs-number">1</span>, <span class="hljs-built_in">len</span>(wpList)):<br>            pre_pos = wpList[i - <span class="hljs-number">1</span>][<span class="hljs-number">1</span>]  <span class="hljs-comment"># 前面一个词性（隐藏状态 y_t-1）</span><br>            cur_pos = wpList[i][<span class="hljs-number">1</span>]  <span class="hljs-comment"># 当前词性状态 y_t</span><br>            word = wpList[i][<span class="hljs-number">0</span>]  <span class="hljs-comment"># 当前观测值(发射值) x_t</span><br>            <span class="hljs-keyword">if</span> word == <span class="hljs-string">&quot;&quot;</span> <span class="hljs-keyword">or</span> cur_pos == <span class="hljs-string">&quot;&quot;</span> <span class="hljs-keyword">or</span> pre_pos == <span class="hljs-string">&quot;&quot;</span>:<br>                <span class="hljs-keyword">continue</span><br>            add2transDict(pre_pos, cur_pos, transDict)  <span class="hljs-comment"># 统计转移频次</span><br>            add2emitDict(cur_pos, word, emitDict)  <span class="hljs-comment"># 统计发射频次</span><br>        add2transDict(<span class="hljs-string">&quot;__end__&quot;</span>, <span class="hljs-string">&quot;__end__&quot;</span>, transDict)<br>    fdi.close()<br></code></pre></td></tr></table></figure>
+
+<p>在导出模型参数阶段将统计的频数转换为概率的对数，之后运算过程中求概率相乘即求对数相加。</p>
+<h4 id="HMM标注"><a href="#HMM标注" class="headerlink" title="HMM标注"></a>HMM标注</h4><p>测试集采用的people-2014&#x2F;0123&#x2F;c1001-24200318.txt</p>
+<p>和HMM分词思路相同，通过动态规划的方式寻找最优路径，从前一列的最优路径上继续延申下一词的最优路径。</p>
+<figure class="highlight prolog"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br></pre></td><td class="code"><pre><code class="hljs Prolog">def predict4one(words, gPosList, transDict, emitDict, results):<br>    if words == []:<br>        return<br>    prePosDictList = []<br>    for i in range(len(words)):  # 遍历单词<br>        prePosDict = &#123;&#125;<br>        for pos in gPosList:  # 遍历词性<br>            if i == <span class="hljs-number">0</span>:  # 初始矩阵<br>                trans_prob = transDict[<span class="hljs-string">&quot;__start__&quot;</span>][pos]<br>                emit_prob = getEmitProb(emitDict, pos, words[i])<br>                total_prob = trans_prob + emit_prob  <br>                prePosDict[pos] = [total_prob, <span class="hljs-string">&quot;__start__&quot;</span>]<br>            else:<br>                emit_prob = getEmitProb(emitDict, pos, words[i])<br>                max_total_prob = <span class="hljs-number">-10000000.0</span><br>                max_pre_pos = <span class="hljs-string">&quot;&quot;</span><br>                for pre_pos in prePosDictList[i - <span class="hljs-number">1</span>]:  <br># 动态规划：全局最大-&gt;局部最大-&gt;在前一次里面找最大的<br>                    pre_prob = prePosDictList[i - <span class="hljs-number">1</span>][pre_pos][<span class="hljs-number">0</span>]<br>                    trans_prob = transDict[pre_pos][pos]<br>                    total_prob = pre_prob + trans_prob + emit_prob<br>                    if max_pre_pos == <span class="hljs-string">&quot;&quot;</span> or total_prob &gt; max_total_prob:<br>                        max_total_prob = total_prob<br>                        max_pre_pos = pre_pos<br>                prePosDict[pos] = [max_total_prob, max_pre_pos]<br>        prePosDictList.append(prePosDict)<br>    max_total_prob = <span class="hljs-number">-10000000.0</span><br>    max_pre_pos = <span class="hljs-string">&quot;&quot;</span><br>    for pre_pos in prePosDictList[len(prePosDictList) - <span class="hljs-number">1</span>]:  # 最后一列<br>        pre_prob = prePosDictList[len(prePosDictList) - <span class="hljs-number">1</span>][pre_pos][<span class="hljs-number">0</span>]<br>        trans_prob = transDict[pre_pos][<span class="hljs-string">&quot;__end__&quot;</span>]<br>        total_prob = pre_prob + trans_prob  <br>        if max_pre_pos == <span class="hljs-string">&quot;&quot;</span> or total_prob &gt; max_total_prob:<br>            max_total_prob = total_prob<br>            max_pre_pos = pre_pos<br>    posList = [max_pre_pos]  # 最优路径<br>    indx = len(prePosDictList) - <span class="hljs-number">1</span><br>    max_pre_pos = prePosDictList[indx][max_pre_pos][<span class="hljs-number">1</span>]<br>    indx -= <span class="hljs-number">1</span><br>    while indx &gt;= <span class="hljs-number">0</span>:<br>        posList.append(max_pre_pos)<br>        max_pre_pos = prePosDictList[indx][max_pre_pos][<span class="hljs-number">1</span>]<br>        indx -= <span class="hljs-number">1</span><br>    if len(posList) == len(words):<br>        posList.reverse()<br>        for i in range(len(posList)):<br>            results.append(words[i] + <span class="hljs-string">&quot;/&quot;</span> + posList[i])<br></code></pre></td></tr></table></figure>
+
+
+
+<h4 id="结果和分析"><a href="#结果和分析" class="headerlink" title="结果和分析"></a>结果和分析</h4><p>截取的一段分词结果：</p>
+<blockquote>
+<p>本报&#x2F;rz 北京&#x2F;ns 1月22日&#x2F;t 电&#x2F;n （&#x2F;w 记者&#x2F;nnt 朱剑红&#x2F;nr ）&#x2F;w 我国&#x2F;n “&#x2F;w 十二五&#x2F;m ”&#x2F;w 规划&#x2F;n 提出&#x2F;v 的&#x2F;ude1 24&#x2F;m 个&#x2F;q 主要&#x2F;b 指标&#x2F;n ，&#x2F;w 绝大部分&#x2F;m 的&#x2F;ude1 实施&#x2F;vn 进度&#x2F;n 好&#x2F;a 于&#x2F;p 预期&#x2F;vn ，&#x2F;w 氮氧化物&#x2F;n 排放&#x2F;vn 总量&#x2F;n 减少&#x2F;v 、&#x2F;w 化石&#x2F;n 能源&#x2F;n 占&#x2F;v 一次&#x2F;mq 能源&#x2F;n 消费&#x2F;vn 比重&#x2F;n 、&#x2F;w 单位&#x2F;n GDP&#x2F;x 能源&#x2F;n 消耗&#x2F;v 降低&#x2F;vn 、&#x2F;w 单位&#x2F;n GDP&#x2F;x 二氧化碳&#x2F;n 排放&#x2F;vn 降低&#x2F;vn 等&#x2F;udeng 四&#x2F;m 个&#x2F;q 指标&#x2F;n 完成&#x2F;v 的&#x2F;ude1 进度&#x2F;n 滞后&#x2F;v 于&#x2F;p 预期&#x2F;vn 。&#x2F;w 这&#x2F;rzv 是&#x2F;vshi 国家&#x2F;n 发改委&#x2F;nis 有关&#x2F;vn 负责人&#x2F;nnt 今天&#x2F;t 在&#x2F;p “&#x2F;w 宏观&#x2F;n 经济&#x2F;n 形势&#x2F;n 和&#x2F;cc 政策&#x2F;n ”&#x2F;w 新闻&#x2F;n 发布会&#x2F;n 上&#x2F;f 透露&#x2F;v 的&#x2F;ude1 。&#x2F;w 国家&#x2F;n 发改委&#x2F;nis 已&#x2F;d 组织&#x2F;n 有关&#x2F;vn 部门&#x2F;n 和&#x2F;cc 有关方面&#x2F;nz 对&#x2F;p “&#x2F;w 十二五&#x2F;m ”&#x2F;w 规划&#x2F;n 的&#x2F;ude1 实施&#x2F;vn 情况&#x2F;n 进行&#x2F;vn 了&#x2F;ule 全面&#x2F;ad 的&#x2F;ude1 分析&#x2F;vn 和&#x2F;cc 评估&#x2F;vn ，&#x2F;w 评估&#x2F;vn 报告&#x2F;n 在&#x2F;p 修改&#x2F;v 完成&#x2F;vn 后&#x2F;f 将&#x2F;d 对外&#x2F;vn 公开&#x2F;ad 。&#x2F;w</p>
+</blockquote>
+<blockquote>
+<p>在&#x2F;p 发展&#x2F;vn 目标&#x2F;n 方面&#x2F;n ，&#x2F;w “&#x2F;w 十二五&#x2F;m ”&#x2F;w 规划&#x2F;n 提出&#x2F;v 来&#x2F;vf 的&#x2F;ude1 GDP&#x2F;x 增长&#x2F;v 预期&#x2F;vn 性&#x2F;ng 指标&#x2F;n 是&#x2F;vshi 年均&#x2F;v 增长&#x2F;v 7%&#x2F;m ，&#x2F;w 在&#x2F;p 过去&#x2F;vf 三年&#x2F;t 里&#x2F;f ，&#x2F;w 分别&#x2F;d 实现&#x2F;v 了&#x2F;ule 9.2%&#x2F;m 、&#x2F;w 7.7%&#x2F;m 和&#x2F;cc 7.7%&#x2F;m ，&#x2F;w 完成&#x2F;v 目标&#x2F;n 没有&#x2F;v 任何&#x2F;rz 问题&#x2F;n 。&#x2F;w 其他&#x2F;rzv 指标&#x2F;n 有&#x2F;vyou 两个&#x2F;mq 已经&#x2F;d 提前&#x2F;vd 完成&#x2F;v ，&#x2F;w 一&#x2F;d 是&#x2F;vshi 每&#x2F;rz 万&#x2F;d 人&#x2F;n 发明&#x2F;v 专利&#x2F;n 拥有量&#x2F;n ，&#x2F;w 二&#x2F;m 是&#x2F;vshi 森林&#x2F;n 蓄积量&#x2F;nz 。&#x2F;w</p>
+</blockquote>
+<p>准确率为0.97440585</p>
+
+              
+            </div>
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/blogs/categories/NLP/" class="category-chain-item">NLP</a>
+  
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/blogs/tags/NLP/">#NLP</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>NLP | HMM中文分词及词性标注</div>
+      <div>https://wokeeeeee.github.io/blogs/2022/05/14/NLP-HMM中文分词及词性标注/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Luo Xinyu</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2022年5月14日</div>
+        </div>
+      
+      
+      <div class="license-meta-item">
+        <div>许可协议</div>
+        <div>
+          
+            
+            
+              <a target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+              <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                <i class="iconfont icon-by"></i>
+              </span>
+              </a>
+            
+          
+        </div>
+      </div>
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/blogs/2022/05/14/NLP-%E5%9F%BA%E4%BA%8E%E6%9C%B4%E7%B4%A0%E8%B4%9D%E5%8F%B6%E6%96%AF%E7%9A%84%E4%B8%AD%E6%96%87%E6%96%87%E6%9C%AC%E5%88%86%E7%B1%BB/" title="NLP | 基于朴素贝叶斯的中文文本分类">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">NLP | 基于朴素贝叶斯的中文文本分类</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/blogs/2022/05/07/linux%E7%B3%BB%E7%BB%9F%E4%B8%8B%E4%B8%B2%E5%8F%A3%E5%8F%B7%E7%BB%91%E5%AE%9A/" title="linux系统下串口号绑定">
+                        <span class="hidden-mobile">linux系统下串口号绑定</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+  <article id="comments" lazyload>
+    
+
+  </article>
+
+
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;目录</p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.0/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/blogs/js/events.js" ></script>
+<script  src="/blogs/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+
+
+  
+    <script  src="/blogs/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.18.0/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      headingSelector : CONFIG.toc.headingSelector || 'h1,h2,h3,h4,h5,h6',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      collapseDepth   : CONFIG.toc.collapseDepth || 0,
+      scrollSmooth    : true,
+      headingsOffset  : -boardTop
+    });
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+  });
+</script>
+
+
+  <script>
+  (function() {
+    var enableLang = CONFIG.code_language.enable && CONFIG.code_language.default;
+    var enableCopy = CONFIG.copy_btn;
+    if (!enableLang && !enableCopy) {
+      return;
+    }
+
+    function getBgClass(ele) {
+      return Fluid.utils.getBackgroundLightness(ele) >= 0 ? 'code-widget-light' : 'code-widget-dark';
+    }
+
+    var copyTmpl = '';
+    copyTmpl += '<div class="code-widget">';
+    copyTmpl += 'LANG';
+    copyTmpl += '</div>';
+    jQuery('.markdown-body pre').each(function() {
+      var $pre = jQuery(this);
+      if ($pre.find('code.mermaid').length > 0) {
+        return;
+      }
+      if ($pre.find('span.line').length > 0) {
+        return;
+      }
+
+      var lang = '';
+
+      if (enableLang) {
+        lang = CONFIG.code_language.default;
+        if ($pre[0].children.length > 0 && $pre[0].children[0].classList.length >= 2 && $pre.children().hasClass('hljs')) {
+          lang = $pre[0].children[0].classList[1];
+        } else if ($pre[0].getAttribute('data-language')) {
+          lang = $pre[0].getAttribute('data-language');
+        } else if ($pre.parent().hasClass('sourceCode') && $pre[0].children.length > 0 && $pre[0].children[0].classList.length >= 2) {
+          lang = $pre[0].children[0].classList[1];
+          $pre.parent().addClass('code-wrapper');
+        } else if ($pre.parent().hasClass('markdown-body') && $pre[0].classList.length === 0) {
+          $pre.wrap('<div class="code-wrapper"></div>');
+        }
+        lang = lang.toUpperCase().replace('NONE', CONFIG.code_language.default);
+      }
+      $pre.append(copyTmpl.replace('LANG', lang).replace('code-widget">',
+        getBgClass($pre[0]) + (enableCopy ? ' code-widget copy-btn" data-clipboard-snippet><i class="iconfont icon-copy"></i>' : ' code-widget">')));
+
+      if (enableCopy) {
+        Fluid.utils.createScript('https://lib.baomitu.com/clipboard.js/2.0.10/clipboard.min.js', function() {
+          var clipboard = new window.ClipboardJS('.copy-btn', {
+            target: function(trigger) {
+              var nodes = trigger.parentNode.childNodes;
+              for (var i = 0; i < nodes.length; i++) {
+                if (nodes[i].tagName === 'CODE') {
+                  return nodes[i];
+                }
+              }
+            }
+          });
+          clipboard.on('success', function(e) {
+            e.clearSelection();
+            e.trigger.innerHTML = e.trigger.innerHTML.replace('icon-copy', 'icon-success');
+            setTimeout(function() {
+              e.trigger.innerHTML = e.trigger.innerHTML.replace('icon-success', 'icon-copy');
+            }, 2000);
+          });
+        });
+      }
+    });
+  })();
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/4.3.1/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/blogs/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/blogs/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>
