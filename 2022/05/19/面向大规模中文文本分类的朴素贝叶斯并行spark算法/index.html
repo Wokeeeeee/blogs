@@ -1,0 +1,742 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/blogs/img/fluid.png">
+  <link rel="icon" href="/blogs/img/fluid.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Luo Xinyu">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="面向大规模中文文本分类的朴素贝叶斯并行spark算法Overall process of text classification: 3 steps Corpus preprocessing: word segmentation, stop words removal, frequency statistics, feature selection Text representation: text">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Spark | NLP | 面向大规模中文文本分类的朴素贝叶斯并行spark算法">
+<meta property="og:url" content="https://wokeeeeee.github.io/blogs/2022/05/19/%E9%9D%A2%E5%90%91%E5%A4%A7%E8%A7%84%E6%A8%A1%E4%B8%AD%E6%96%87%E6%96%87%E6%9C%AC%E5%88%86%E7%B1%BB%E7%9A%84%E6%9C%B4%E7%B4%A0%E8%B4%9D%E5%8F%B6%E6%96%AF%E5%B9%B6%E8%A1%8Cspark%E7%AE%97%E6%B3%95/index.html">
+<meta property="og:site_name" content="wokeeeeee">
+<meta property="og:description" content="面向大规模中文文本分类的朴素贝叶斯并行spark算法Overall process of text classification: 3 steps Corpus preprocessing: word segmentation, stop words removal, frequency statistics, feature selection Text representation: text">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://github.com/Wokeeeeee/picb/blob/master/spark/bayes.png?raw=true">
+<meta property="og:image" content="https://github.com/Wokeeeeee/picb/blob/master/spark/prob.png?raw=true">
+<meta property="article:published_time" content="2022-05-19T14:13:29.000Z">
+<meta property="article:modified_time" content="2022-05-22T11:12:37.784Z">
+<meta property="article:author" content="Luo Xinyu">
+<meta property="article:tag" content="BigData">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://github.com/Wokeeeeee/picb/blob/master/spark/bayes.png?raw=true">
+  
+  
+  <title>Spark | NLP | 面向大规模中文文本分类的朴素贝叶斯并行spark算法 - wokeeeeee</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_hj8rtnfg7um.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_lbnruvf0jn.css">
+
+
+<link  rel="stylesheet" href="/blogs/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/blogs/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/blogs/css/highlight-dark.css" />
+  
+
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    var CONFIG = {"hostname":"wokeeeeee.github.io","root":"/blogs/","version":"1.8.14","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":null,"google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/blogs/local-search.xml"};
+  </script>
+  <script  src="/blogs/js/utils.js" ></script>
+  <script  src="/blogs/js/color-schema.js" ></script>
+
+  
+<meta name="generator" content="Hexo 6.1.0"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 50vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/blogs/">
+      <strong>Wokeeee</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/blogs/">
+                <i class="iconfont icon-home-fill"></i>
+                首页
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/blogs/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                归档
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/blogs/categories/">
+                <i class="iconfont icon-category-fill"></i>
+                分类
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/blogs/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                标签
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              &nbsp;<i class="iconfont icon-search"></i>&nbsp;
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">&nbsp;<i
+                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/blogs/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="Spark | NLP | 面向大规模中文文本分类的朴素贝叶斯并行spark算法"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2022-05-19 22:13" pubdate>
+          2022年5月19日 晚上
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          4.7k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          39 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">Spark | NLP | 面向大规模中文文本分类的朴素贝叶斯并行spark算法</h1>
+            
+            <div class="markdown-body">
+              
+              <h1 id="面向大规模中文文本分类的朴素贝叶斯并行spark算法"><a href="#面向大规模中文文本分类的朴素贝叶斯并行spark算法" class="headerlink" title="面向大规模中文文本分类的朴素贝叶斯并行spark算法"></a>面向大规模中文文本分类的朴素贝叶斯并行spark算法</h1><h1 id="Overall-process-of-text-classification-3-steps"><a href="#Overall-process-of-text-classification-3-steps" class="headerlink" title="Overall process of text classification: 3 steps"></a>Overall process of text classification: 3 steps</h1><ol>
+<li>Corpus preprocessing: word segmentation, stop words removal, frequency statistics, feature selection</li>
+<li>Text representation: text -&gt; new form -&gt;computor</li>
+<li>Text classification based on ml algorithm</li>
+</ol>
+<h1 id="Corpus-preprocessing"><a href="#Corpus-preprocessing" class="headerlink" title="Corpus preprocessing"></a>Corpus preprocessing</h1><h2 id="Word-segmentation"><a href="#Word-segmentation" class="headerlink" title="Word segmentation"></a>Word segmentation</h2><p>Chinese word don’t have continuous space between words.<br>Segmenting text according to the meaning of words and separating words by space.</p>
+<h2 id="Stop-words-removal"><a href="#Stop-words-removal" class="headerlink" title="Stop words removal"></a>Stop words removal</h2><p>Segmented words have a large number of function words,such as 的，吗，在. -&gt;stop words.</p>
+<p>A stop words list is needed to filter out stop words.</p>
+<p>Storage space can be saved, dimension of feature space can be reduced, accelerate</p>
+<h2 id="Word-frequency-statistics"><a href="#Word-frequency-statistics" class="headerlink" title="Word frequency statistics"></a>Word frequency statistics</h2><p>Count how many times a given word appears in a given document.</p>
+<h2 id="Feature-selection"><a href="#Feature-selection" class="headerlink" title="Feature selection"></a>Feature selection</h2><p>Select a feature subset from all features.-&gt;remove features which cannot reflect contents of documents-&gt; reduce dimension of vector space and complexity</p>
+<h2 id="Text-representation"><a href="#Text-representation" class="headerlink" title="Text representation"></a>Text representation</h2><p>In this paper, the Chinese text is represented by VSM. Each dimension of vector is composed of feature item and its weight. The weight is calculated with TFIDF.</p>
+<h1 id="Text-classification"><a href="#Text-classification" class="headerlink" title="Text classification"></a>Text classification</h1><p>Determinate a classification for each text</p>
+<p>Frequently-used text classification algorithm: naive Bayes,KNN,SVM,etc</p>
+<h2 id="Naive-Bayes"><a href="#Naive-Bayes" class="headerlink" title="Naive Bayes"></a>Naive Bayes</h2><p>Calculate each probability for each class -&gt; select the most probable one as its classification result.<br>3 steps:</p>
+<ol>
+<li>Obtain the training samples with known classification results</li>
+<li>Count the class conditional probabilities with each feature</li>
+<li>independent-&gt;bayes’ theorem</li>
+</ol>
+<h2 id="Hadoop-based-parallelization"><a href="#Hadoop-based-parallelization" class="headerlink" title="Hadoop-based parallelization"></a>Hadoop-based parallelization</h2><p>PNBA-&gt;training and prediction</p>
+<h3 id="training"><a href="#training" class="headerlink" title="training"></a>training</h3><p>Contains 2 sequential MapReduce jobs</p>
+<p><strong>First MapReduce Job</strong></p>
+<p>Map-&gt;each Mapper receives a portion of the data block from the training TFIDF text vector,split each record into a specific key-value pair, aggregates all the vector weights </p>
+<p>Reduce-&gt;each key-value pair aggregated globally, the model attribute vector ScoresFeatureAndLabel is obtained</p>
+<p><strong>Second MapReduce Job</strong></p>
+<p><strong>Map</strong>-&gt;split into &lt;class, sum of class feature vector&gt; and &lt;feature, sum of feature vector&gt;, aggrefates all the features for each class and in all classes.</p>
+<p><strong>Reduce</strong>-&gt;globally aggregated, WeightsPerLabel and WeightsPerFeature are obtained.</p>
+<p><strong>Classification model</strong> -&gt; ScoresFeatureAndLabel, WeightsPerLabel, WeightsPerFeature</p>
+<h3 id="prediction"><a href="#prediction" class="headerlink" title="prediction"></a>prediction</h3><p>Each Mapper receives partial data blocks from test TFIDF text vector</p>
+<p>Call the classification model-&gt;Calculating and compare<br>Reducer merge calculation result of each Mapper, accuracy calculate</p>
+<h2 id="Spark-based-parallelization"><a href="#Spark-based-parallelization" class="headerlink" title="Spark-based parallelization"></a>Spark-based parallelization</h2><p>Also 2 phases-&gt;training and prediction</p>
+<p>DIFFERENCE: Spark-based version focuses on the algorithm design RDD( resilient distributed datasets )</p>
+<h3 id="intro"><a href="#intro" class="headerlink" title="intro"></a>intro</h3><p>Operation of RDD-&gt; transformation and action</p>
+<p>Transformation: creating a new RDD on the basis of present RDD</p>
+<p>Action: perform the actual computation, and then return a simple-data-type value or output data to memory. </p>
+<h3 id="smoothing"><a href="#smoothing" class="headerlink" title="smoothing"></a>smoothing</h3><p><img src="https://github.com/Wokeeeeee/picb/blob/master/spark/bayes.png?raw=true" srcset="/blogs/img/loading.gif" lazyload></p>
+<p>When lamda&#x3D;1 -&gt;laplace smoothing</p>
+<p>When Lamda&lt;1 -&gt;Lidstone smoothing</p>
+<p>When the training set is large enough, the smoothing method not noly avoid the probability of0 but also keeps the classification result not be affected.</p>
+<p>For calculating probability is caused by multiplying by several conditional probability values from 0 to 1, which would result in the underflow of floating numbers. So take Logarithm.</p>
+<p><img src="https://github.com/Wokeeeeee/picb/blob/master/spark/prob.png?raw=true" srcset="/blogs/img/loading.gif" lazyload></p>
+<h3 id="training-1"><a href="#training-1" class="headerlink" title="training"></a>training</h3><p>Training samples which have been marked categories –&gt; set up text categorization model.</p>
+<p>This formula shows the number of  each class and the total number of each feature value in each class must be counted.</p>
+<p>Spark supports the operation of HDFS to conduct row processing of text data. </p>
+<p>Present training samples as key-value pairs and store them in HDFS—&gt; manifest the the training process in the transformation process of RDD.</p>
+<p><strong>To count the frequency and number of each class and the frequency of each feature for each class:</strong></p>
+<ol>
+<li>Read all text vectors and form RDD</li>
+<li>Conduct the map operation for RDD: map each row in the form of (label, (1, features))…label:class number, 1:document number, features:feature value vectors of certain text.</li>
+<li>Take label as key to conduct reduceByKey.(label,(N,featuresSum))-&gt;N:document number to certain label.</li>
+</ol>
+<p><strong>Parallelization of NB classifier’s training process based on Spark</strong></p>
+<ol>
+<li>Input: the preprocessed training set</li>
+<li>steps:<br>• Define zeroCombiner [class, (text number, conditional probability in this class of each feature)] for map data structure.</li>
+</ol>
+<p>• Initialize the value of ZeroCombiner and calculate the total number and feature vector sum for local samples.</p>
+<p>• Obtain class number C and total number of training samples N.</p>
+<p>• For each class i do: </p>
+<p>Obtain the number of samples in every class n, calculate class prior probability.</p>
+<p>For each feature vector v in the class do: </p>
+<p>calculate the denomiator of class conditional probability p and take the log.</p>
+<p>END</p>
+<ol start="3">
+<li>ouput：the training model made up of matrix theta and vector pi</li>
+</ol>
+<p><strong>Parallelization of classifier’s predicting process</strong></p>
+<p>Test samples are input to form the RDD</p>
+<p>Use map function to calculate the prob of text samples for each class.</p>
+<p>Take the calss with the mximum prob as the class mark</p>
+<h2 id="Experiment-design-and-analysis"><a href="#Experiment-design-and-analysis" class="headerlink" title="Experiment design and analysis"></a>Experiment design and analysis</h2><ol>
+<li>Relationship between training time and partition number</li>
+<li>Relationship between node number and training time:speedup, system scalability, data scalability.</li>
+<li>Comparison of training time of text classification on various platforms</li>
+<li>Predicting result of text classification : p, r, f1</li>
+</ol>
+
+              
+            </div>
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/blogs/categories/BigData/" class="category-chain-item">BigData</a>
+  
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/blogs/tags/BigData/">#BigData</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>Spark | NLP | 面向大规模中文文本分类的朴素贝叶斯并行spark算法</div>
+      <div>https://wokeeeeee.github.io/blogs/2022/05/19/面向大规模中文文本分类的朴素贝叶斯并行spark算法/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Luo Xinyu</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2022年5月19日</div>
+        </div>
+      
+      
+      <div class="license-meta-item">
+        <div>许可协议</div>
+        <div>
+          
+            
+            
+              <a target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+              <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                <i class="iconfont icon-by"></i>
+              </span>
+              </a>
+            
+          
+        </div>
+      </div>
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/blogs/2022/05/22/w2v/" title="NLP | Skip-Gram 的 pytorch 实现">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">NLP | Skip-Gram 的 pytorch 实现</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/blogs/2022/05/14/NLP-%E5%9F%BA%E4%BA%8E%E6%9C%B4%E7%B4%A0%E8%B4%9D%E5%8F%B6%E6%96%AF%E7%9A%84%E4%B8%AD%E6%96%87%E6%96%87%E6%9C%AC%E5%88%86%E7%B1%BB/" title="NLP | 基于朴素贝叶斯的中文文本分类">
+                        <span class="hidden-mobile">NLP | 基于朴素贝叶斯的中文文本分类</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+  <article id="comments" lazyload>
+    
+
+  </article>
+
+
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;目录</p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.0/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/blogs/js/events.js" ></script>
+<script  src="/blogs/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+
+
+  
+    <script  src="/blogs/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.18.0/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      headingSelector : CONFIG.toc.headingSelector || 'h1,h2,h3,h4,h5,h6',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      collapseDepth   : CONFIG.toc.collapseDepth || 0,
+      scrollSmooth    : true,
+      headingsOffset  : -boardTop
+    });
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+  });
+</script>
+
+
+  <script>
+  (function() {
+    var enableLang = CONFIG.code_language.enable && CONFIG.code_language.default;
+    var enableCopy = CONFIG.copy_btn;
+    if (!enableLang && !enableCopy) {
+      return;
+    }
+
+    function getBgClass(ele) {
+      return Fluid.utils.getBackgroundLightness(ele) >= 0 ? 'code-widget-light' : 'code-widget-dark';
+    }
+
+    var copyTmpl = '';
+    copyTmpl += '<div class="code-widget">';
+    copyTmpl += 'LANG';
+    copyTmpl += '</div>';
+    jQuery('.markdown-body pre').each(function() {
+      var $pre = jQuery(this);
+      if ($pre.find('code.mermaid').length > 0) {
+        return;
+      }
+      if ($pre.find('span.line').length > 0) {
+        return;
+      }
+
+      var lang = '';
+
+      if (enableLang) {
+        lang = CONFIG.code_language.default;
+        if ($pre[0].children.length > 0 && $pre[0].children[0].classList.length >= 2 && $pre.children().hasClass('hljs')) {
+          lang = $pre[0].children[0].classList[1];
+        } else if ($pre[0].getAttribute('data-language')) {
+          lang = $pre[0].getAttribute('data-language');
+        } else if ($pre.parent().hasClass('sourceCode') && $pre[0].children.length > 0 && $pre[0].children[0].classList.length >= 2) {
+          lang = $pre[0].children[0].classList[1];
+          $pre.parent().addClass('code-wrapper');
+        } else if ($pre.parent().hasClass('markdown-body') && $pre[0].classList.length === 0) {
+          $pre.wrap('<div class="code-wrapper"></div>');
+        }
+        lang = lang.toUpperCase().replace('NONE', CONFIG.code_language.default);
+      }
+      $pre.append(copyTmpl.replace('LANG', lang).replace('code-widget">',
+        getBgClass($pre[0]) + (enableCopy ? ' code-widget copy-btn" data-clipboard-snippet><i class="iconfont icon-copy"></i>' : ' code-widget">')));
+
+      if (enableCopy) {
+        Fluid.utils.createScript('https://lib.baomitu.com/clipboard.js/2.0.10/clipboard.min.js', function() {
+          var clipboard = new window.ClipboardJS('.copy-btn', {
+            target: function(trigger) {
+              var nodes = trigger.parentNode.childNodes;
+              for (var i = 0; i < nodes.length; i++) {
+                if (nodes[i].tagName === 'CODE') {
+                  return nodes[i];
+                }
+              }
+            }
+          });
+          clipboard.on('success', function(e) {
+            e.clearSelection();
+            e.trigger.innerHTML = e.trigger.innerHTML.replace('icon-copy', 'icon-success');
+            setTimeout(function() {
+              e.trigger.innerHTML = e.trigger.innerHTML.replace('icon-success', 'icon-copy');
+            }, 2000);
+          });
+        });
+      }
+    });
+  })();
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/4.3.1/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/blogs/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/blogs/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>
